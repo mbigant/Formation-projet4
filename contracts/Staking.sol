@@ -7,17 +7,8 @@ import "./RewardToken.sol";
 
 contract Staking is Ownable {
 
-    uint constant BLOCK_DISTRIBUTION = 10; // todo valeure arbitraire, à définir
-
-    uint public totalStaked;
-    uint private lastUpdateBlock;
-    uint private rewardPerToken;
-
-    mapping( address => User ) private users;
-
-    // todo gérer pool
-    IERC20 private rewardToken;
-    IERC20 private stakingToken;
+    Pool[] public pools;
+    mapping(uint => mapping(address => User)) private usersInPool;
 
     struct User {
         uint balance;
@@ -26,90 +17,131 @@ contract Staking is Ownable {
         uint rewardPerToken;
     }
 
-    constructor( address _rewardToken, address _stakingToken ) {
-        rewardToken = IERC20(_rewardToken);
-        stakingToken = IERC20(_stakingToken);
+    struct Pool {
+        uint totalStaked;
+        uint lastUpdateBlock;
+        uint rewardPerToken;
+        uint rewardPerBlock;
+        IERC20 stakingToken;
+        IERC20 rewardToken;
     }
 
-//    constructor() {
-//        rewardToken = new MBToken(1000000);
-//        stakingToken = IERC20(0xd9145CCE52D386f254917e481eB44e9943F39138);
-//    }
+    event PoolCreated(uint indexed pool);
+    event Staked(uint indexed pool, address user, uint amount);
+    event Withdrawn(uint indexed pool, address user, uint amount);
+    event Claimed(uint indexed pool, address user, uint amount);
 
-    function createPool( address _tokenToStake, address _tokenReward, uint _rewardRate ) external onlyOwner {
-        //todo
+    constructor() {
     }
 
-    function deposit( uint _amount ) external {
-        require( _amount > 0, "You must deposit tokens");
-        require( _amount <= stakingToken.balanceOf(msg.sender), "You don't have enough token");
+    function createPool(address _tokenToStake, address _tokenReward, uint _rewardPerBlock, address _chainlinkDataFeedAddress) external onlyOwner {
+        require(_tokenToStake != address(0), "Bad staking token address");
+        require(_tokenReward != address(0), "Bad reward token address");
+        require(_chainlinkDataFeedAddress != address(0), "Bad oracle address");
+        require(_rewardPerBlock > 0, "Reward rate must be positive");
 
-        _updateRewards();
+        pools.push(
+            Pool({
+        totalStaked : 0,
+        lastUpdateBlock : block.number,
+        rewardPerBlock : _rewardPerBlock,
+        rewardPerToken : 0,
+        stakingToken : IERC20(_tokenToStake),
+        rewardToken : IERC20(_tokenReward)
+        })
+        );
 
-        totalStaked += _amount;
-        users[msg.sender].balance += _amount;
+        emit PoolCreated(pools.length - 1);
+    }
 
-        bool success = stakingToken.transferFrom(msg.sender, address(this), _amount);
+    function deposit(uint _poolId, uint _amount) external {
+        require(_amount > 0, "You must deposit tokens");
+        require(_poolId < pools.length, "Pool not found");
+        require(_amount <= pools[_poolId].stakingToken.balanceOf(msg.sender), "You don't have enough token");
+
+        _updateRewards(_poolId);
+
+        pools[_poolId].totalStaked += _amount;
+        usersInPool[_poolId][msg.sender].balance += _amount;
+
+        bool success = pools[_poolId].stakingToken.transferFrom(msg.sender, address(this), _amount);
         assert(success);
+
+        emit Staked(_poolId, msg.sender, _amount);
     }
 
-    function withdraw( uint _amount ) external {
-        require(_amount <= users[msg.sender].balance, "Not enough token to widthdraw");
+    function withdraw(uint _poolId, uint _amount) external {
+        require(_poolId < pools.length, "Pool not found");
+        require(_amount <= usersInPool[_poolId][msg.sender].balance, "Not enough token to widthdraw");
 
-        _updateRewards();
+        _updateRewards(_poolId);
 
-        users[msg.sender].balance -= _amount;
-        totalStaked -= _amount;
-        _claimReward();
+        usersInPool[_poolId][msg.sender].balance -= _amount;
+        pools[_poolId].totalStaked -= _amount;
+        _claimReward(_poolId);
 
-        bool success = stakingToken.transfer( msg.sender, _amount );
+        bool success = pools[_poolId].stakingToken.transfer(msg.sender, _amount);
         assert(success);
+
+        emit Withdrawn(_poolId, msg.sender, _amount);
     }
 
-    function claim() external {
-        require(users[msg.sender].rewardBalance > 0, "Nothing to claim");
-        _claimReward();
+    function claim(uint _poolId) external {
+        require(_poolId < pools.length, "Pool not found");
+        require(usersInPool[_poolId][msg.sender].rewardBalance > 0, "Nothing to claim");
+        _claimReward(_poolId);
     }
 
-    function getRewardToClaim() external view returns (uint) {
-        return users[msg.sender].rewardBalance;
+    function getRewardToClaim(uint _poolId) external view returns (uint) {
+        require(_poolId < pools.length, "Pool not found");
+        return usersInPool[_poolId][msg.sender].rewardBalance;
     }
 
-    function _updateRewards() internal {
-        rewardPerToken = _getRewardPerToken();
-        lastUpdateBlock = block.number;
-        users[msg.sender].rewardBalance = _getRewardsEarnedLastPeriod();
-        users[msg.sender].rewardPerToken = rewardPerToken;
+    function _updateRewards(uint _poolId) private {
+        pools[_poolId].rewardPerToken = _getRewardPerToken(_poolId);
+        pools[_poolId].lastUpdateBlock = block.number;
+        usersInPool[_poolId][msg.sender].rewardBalance = _getRewardsEarnedLastPeriod(_poolId);
+        usersInPool[_poolId][msg.sender].rewardPerToken = pools[_poolId].rewardPerToken;
     }
 
-    function _getRewardsEarnedLastPeriod() private view returns (uint) {
-        return ( users[msg.sender].balance * ( rewardPerToken - users[msg.sender].rewardPerToken ) / 1e18 ) + users[msg.sender].rewardBalance;
+    function _getRewardsEarnedLastPeriod(uint _poolId) private view returns (uint) {
+        return (usersInPool[_poolId][msg.sender].balance * (pools[_poolId].rewardPerToken - usersInPool[_poolId][msg.sender].rewardPerToken) / 1e18) + usersInPool[_poolId][msg.sender].rewardBalance;
     }
 
-    function _claimReward() internal {
-        if( users[msg.sender].rewardBalance > 0 ) {
-            uint rewardAmount = users[msg.sender].rewardBalance;
-            users[msg.sender].rewardBalance = 0;
-            bool success = rewardToken.transfer(msg.sender, rewardAmount);
+    function _claimReward(uint _poolId) private {
+        if (usersInPool[_poolId][msg.sender].rewardBalance > 0) {
+            uint rewardAmount = usersInPool[_poolId][msg.sender].rewardBalance;
+            usersInPool[_poolId][msg.sender].rewardBalance = 0;
+            bool success = pools[_poolId].rewardToken.transfer(msg.sender, rewardAmount);
             assert(success);
+
+            emit Claimed(_poolId, msg.sender, rewardAmount);
         }
     }
 
-    function _getRewardPerToken() private view returns(uint) {
-        if( totalStaked == 0 ) {
-            return rewardPerToken;
+    function _getRewardPerToken(uint _poolId) private view returns (uint) {
+        if (pools[_poolId].totalStaked == 0) {
+            return pools[_poolId].rewardPerToken;
         }
         else {
-            return rewardPerToken + (((block.number - lastUpdateBlock) * BLOCK_DISTRIBUTION * 1e18) / totalStaked );
+            return pools[_poolId].rewardPerToken + (((block.number - pools[_poolId].lastUpdateBlock) * pools[_poolId].rewardPerBlock * 1e18) / pools[_poolId].totalStaked);
         }
     }
 
-    function getRemainingRewards() external view returns (uint) {
-        return rewardToken.balanceOf(address(this));
+    function getRemainingRewards(uint _poolId) external view returns (uint) {
+        return pools[_poolId].rewardToken.balanceOf(address(this));
     }
 
-    function getUpdatedRewardPerToken() external returns (uint) {
-        _updateRewards();
-        return rewardPerToken;
+    function getUpdatedRewardPerToken(uint _poolId) external returns (uint) {
+        _updateRewards(_poolId);
+        return pools[_poolId].rewardPerToken;
+    }
+
+    function getUserBalance(uint _poolId, address _address) external view returns (uint) {
+        return usersInPool[_poolId][_address].balance;
+    }
+
+    function getPoolBalance(uint _poolId) external view returns (uint) {
+        return pools[_poolId].totalStaked;
     }
 }
