@@ -26,12 +26,13 @@ contract Staking is Ownable {
         IERC20 rewardToken;
     }
 
-    event PoolCreated(uint indexed pool);
-    event Staked(uint indexed pool, address user, uint amount);
-    event Withdrawn(uint indexed pool, address user, uint amount);
-    event Claimed(uint indexed pool, address user, uint amount);
+    event PoolCreated(uint pool);
+    event Staked(uint indexed pool, address indexed user, uint amount);
+    event Withdrawn(uint indexed pool, address indexed user, uint amount);
+    event Claimed(uint indexed pool, address indexed user, uint amount);
 
     constructor() {
+
     }
 
     function createPool(address _tokenToStake, address _tokenReward, uint _rewardPerBlock, address _chainlinkDataFeedAddress) external onlyOwner {
@@ -42,13 +43,13 @@ contract Staking is Ownable {
 
         pools.push(
             Pool({
-        totalStaked : 0,
-        lastUpdateBlock : block.number,
-        rewardPerBlock : _rewardPerBlock,
-        rewardPerToken : 0,
-        stakingToken : IERC20(_tokenToStake),
-        rewardToken : IERC20(_tokenReward)
-        })
+                totalStaked : 0,
+                lastUpdateBlock : block.number,
+                rewardPerBlock : _rewardPerBlock,
+                rewardPerToken : 0,
+                stakingToken : IERC20(_tokenToStake),
+                rewardToken : IERC20(_tokenReward)
+            })
         );
 
         emit PoolCreated(pools.length - 1);
