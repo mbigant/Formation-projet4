@@ -35,6 +35,12 @@ contract Staking is Ownable {
     event Withdrawn(uint indexed pool, address indexed user, uint amount);
     event Claimed(uint indexed pool, address indexed user, uint amount);
 
+    /// @dev revert if pool index is not on the Pool[] array
+    modifier validPool(uint _poolId) {
+        require(_poolId < pools.length, "Pool not found");
+        _;
+    }
+
     constructor() {
 
     }
@@ -90,9 +96,8 @@ contract Staking is Ownable {
      * - `_amount` must be greater than zero
      * - `msg.sender` must own enough token to deposit
      */
-    function deposit(uint _poolId, uint _amount) external {
+    function deposit(uint _poolId, uint _amount) external validPool(_poolId) {
         require(_amount > 0, "You must deposit tokens");
-        require(_poolId < pools.length, "Pool not found");
         require(_amount <= pools[_poolId].stakingToken.balanceOf(msg.sender), "You don't have enough token");
 
         _updateRewards(_poolId);
@@ -120,8 +125,7 @@ contract Staking is Ownable {
      * - `_amount` must be greater than zero
      * - `msg.sender` must have enough token in this pool
      */
-    function withdraw(uint _poolId, uint _amount) external {
-        require(_poolId < pools.length, "Pool not found");
+    function withdraw(uint _poolId, uint _amount) external validPool(_poolId) {
         require(_amount > 0, "Invalid token amount");
         require(_amount <= usersInPool[_poolId][msg.sender].balance, "Not enough token to widthdraw");
 
@@ -149,9 +153,11 @@ contract Staking is Ownable {
      * - `_poolId` must exists in the Pool[] array
      * - `msg.sender` must have rewards to claim for
      */
-    function claim(uint _poolId) external {
-        require(_poolId < pools.length, "Pool not found");
+    function claim(uint _poolId) external validPool(_poolId) {
         require(usersInPool[_poolId][msg.sender].rewardBalance > 0, "Nothing to claim");
+
+        _updateRewards(_poolId);
+
         _claimReward(_poolId);
     }
 
@@ -163,8 +169,7 @@ contract Staking is Ownable {
      * Requirements:
      * - `_poolId` must exists in the Pool[] array
      */
-    function getRewardToClaim(uint _poolId) external view returns (uint) {
-        require(_poolId < pools.length, "Pool not found");
+    function getRewardToClaim(uint _poolId) external view validPool(_poolId) returns (uint) {
         return usersInPool[_poolId][msg.sender].rewardBalance;
     }
 
@@ -226,8 +231,7 @@ contract Staking is Ownable {
      * Requirements:
      * - `_poolId` must exists in the Pool[] array
      */
-    function getUserBalance(uint _poolId, address _address) external view returns (uint) {
-        require(_poolId < pools.length, "Pool not found");
+    function getUserBalance(uint _poolId, address _address) external view validPool(_poolId) returns (uint) {
         return usersInPool[_poolId][_address].balance;
     }
 
@@ -239,14 +243,12 @@ contract Staking is Ownable {
      * Requirements:
      * - `_poolId` must exists in the Pool[] array
      */
-    function getPoolBalance(uint _poolId) external view returns (uint) {
-        require(_poolId < pools.length, "Pool not found");
+    function getPoolBalance(uint _poolId) external view validPool(_poolId) returns (uint) {
         return pools[_poolId].totalStaked;
     }
 
     // todo garder ? permettrait de savoir si la pool a assez de reward token
-    function getRemainingRewards(uint _poolId) external view onlyOwner returns (uint) {
-        require(_poolId < pools.length, "Pool not found");
+    function getRemainingRewards(uint _poolId) external view validPool(_poolId) onlyOwner returns (uint) {
         return pools[_poolId].rewardToken.balanceOf(address(this));
     }
 
