@@ -7,8 +7,8 @@ module.exports = {
   networks: {
     development: {
       host: "127.0.0.1",     // Localhost (default: none)
-      port: 7545,            // Standard Ethereum port (default: none)
-      network_id: "5777"     // Any network (default: none)
+      port: `${process.env.DEV_PORT_NUMBER}`,            // Standard Ethereum port (default: none)
+      network_id: `${process.env.DEV_NETWORK_ID}`     // Any network (default: none)
     },
     mumbai: {
       provider: function () {
@@ -36,7 +36,7 @@ module.exports = {
       network_id: 3
     }
   },
-
+  plugins: ["solidity-coverage"],
   // Set default mocha options here, use special reporters etc.
   mocha: {
     // timeout: 100000
