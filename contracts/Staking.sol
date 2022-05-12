@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./PriceConsumerV3.sol";
 
 contract Staking is Ownable {
 
@@ -28,6 +29,8 @@ contract Staking is Ownable {
         uint rewardPerBlock;
         IERC20 stakingToken;
         IERC20 rewardToken;
+        PriceConsumerV3 rewardTokenDataFeed;
+        PriceConsumerV3 stakingTokenDataFeed;
     }
 
     event PoolCreated(uint pool);
@@ -62,10 +65,11 @@ contract Staking is Ownable {
      * - `_rewardTokenDataFeedAddress` must be a valid address
      * - `_rewardPerBlock` must be greater than zero
      */
-    function createPool(address _tokenToStake, address _tokenReward, uint _rewardPerBlock, address _rewardTokenDataFeedAddress) external onlyOwner {
+    function createPool(address _tokenToStake, address _tokenReward, uint _rewardPerBlock, address _stakingTokenDataFeedAddress, address _rewardTokenDataFeedAddress) external onlyOwner {
         require(_tokenToStake != address(0), "Bad staking token address");
         require(_tokenReward != address(0), "Bad reward token address");
         require(_rewardTokenDataFeedAddress != address(0), "Bad oracle address");
+        require(_stakingTokenDataFeedAddress != address(0), "Bad oracle address");
         require(_rewardPerBlock > 0, "Reward rate must be positive");
 
         pools.push(
@@ -74,8 +78,10 @@ contract Staking is Ownable {
                 lastUpdateBlock : block.number,
                 rewardPerBlock : _rewardPerBlock,
                 rewardPerToken : 0,
+                rewardToken : IERC20(_tokenReward),
+                rewardTokenDataFeed: new PriceConsumerV3(_rewardTokenDataFeedAddress),
                 stakingToken : IERC20(_tokenToStake),
-                rewardToken : IERC20(_tokenReward)
+                stakingTokenDataFeed: new PriceConsumerV3(_stakingTokenDataFeedAddress)
             })
         );
 
@@ -245,6 +251,30 @@ contract Staking is Ownable {
      */
     function getPoolBalance(uint _poolId) external view validPool(_poolId) returns (uint) {
         return pools[_poolId].totalStaked;
+    }
+
+    /**
+     * @dev Return price of the reward token from the pool _poolId
+     *
+     * @param _poolId index of the pool in the Pool[] array
+     *
+     * Requirements:
+     * - `_poolId` must exists in the Pool[] array
+     */
+    function getRewardPrice(uint _poolId) external view validPool(_poolId) returns (int) {
+        return pools[_poolId].rewardTokenDataFeed.getLatestPrice();
+    }
+
+    /**
+     * @dev Return price of the staking token from the pool _poolId
+     *
+     * @param _poolId index of the pool in the Pool[] array
+     *
+     * Requirements:
+     * - `_poolId` must exists in the Pool[] array
+     */
+    function getTokenPrice(uint _poolId) external view validPool(_poolId) returns (int) {
+        return pools[_poolId].stakingTokenDataFeed.getLatestPrice();
     }
 
     // todo garder ? permettrait de savoir si la pool a assez de reward token
