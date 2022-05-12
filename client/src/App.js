@@ -7,6 +7,10 @@ import Web3Context from "./store/web3-context";
 import "./App.css";
 import Header from "./components/Header";
 import StakingList from "./components/StakingList";
+import {Container} from "react-bootstrap";
+import {Route, Switch} from "react-router-dom";
+import Footer from "./components/Footer";
+import AdminPanel from "./components/AdminPanel";
 
 class App extends Component {
   state = { storageValue: 0, web3: null, accounts: null, contract: null, pools: 0 };
@@ -28,7 +32,7 @@ class App extends Component {
       if( window.ethereum ) {
         // detect Metamask account change
         window.ethereum.on('accountsChanged', (accounts) => {
-            this.setState({accounts})
+            this.setState({accounts});
         });
 
         // detect Network account change
@@ -50,7 +54,7 @@ class App extends Component {
 
         });
       }
-      this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase()});
+      this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase(), contractAddress: deployedNetwork.address});
     } catch (error) {
       alert(
         `Failed to load web3, accounts, or contract. Check console for details.`,
@@ -64,12 +68,21 @@ class App extends Component {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
-      <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner}} >
-        <div className="App">
-          <Header/>
-          <StakingList />
-          
-      </div>
+      <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner, contractAddress: this.state.contractAddress}} >
+          <div className="App">
+              <Header/>
+              <Container className="main">
+                  <Switch>
+                      <Route exact path="/">
+                          <StakingList />
+                      </Route>
+                      <Route exact path="/admin">
+                          <AdminPanel />
+                      </Route>
+                  </Switch>
+              </Container>
+              <Footer/>
+          </div>
       </Web3Context.Provider>
       
     );

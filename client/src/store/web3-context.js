@@ -5,7 +5,7 @@ const Web3Context = React.createContext({
     contract: null,
     accounts: [],
     owner: null,
-    pools: []
+    contractAddress: null,
 });
 
 export default Web3Context;
