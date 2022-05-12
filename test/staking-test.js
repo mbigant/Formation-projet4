@@ -1,6 +1,7 @@
 const { BN, expectRevert, expectEvent, time } = require('@openzeppelin/test-helpers');
 const Staking = artifacts.require("./Staking.sol");
 const RewardToken = artifacts.require("./RewardToken.sol");
+const MockPriceFeed = artifacts.require('MockV3Aggregator');
 const { expect } = require('chai');
 
 contract("Staking Contract", accounts => {
@@ -13,8 +14,12 @@ contract("Staking Contract", accounts => {
   let firstDepositBlockNumberForInvestor1;
   let firstDepositBlockNumberForInvestor2InPool1;
   let firstDepositBlockNumberForInvestor2InPool2;
+  
+  let mockPriceFeed;
+  const price = "2000000000000000000"
 
   before( async () => {
+    mockPriceFeed = await MockPriceFeed.new(18, price);
     rewardToken = await RewardToken.new(new BN(1000000), {from: owner});
     stakingToken = await RewardToken.new(new BN(1000000), {from: owner});
     staking = await Staking.new({from: owner});
@@ -26,18 +31,24 @@ contract("Staking Contract", accounts => {
     stakeAmount = new BN(100);
   })
 
-  /*
-  * Staking : 1 investor in 1pool
-  */
+  //Staking : 1 investor in 1 pool
   describe('Staking', async() => {
 
     it("should create pool", async() => {
 
       const rewardPerBlockAmount = new BN(10);
 
-      const result = await staking.createPool(stakingToken.address, rewardToken.address, rewardPerBlockAmount, rewardToken.address, {from: owner});
+      const result = await staking.createPool(stakingToken.address, rewardToken.address, rewardPerBlockAmount, mockPriceFeed.address, mockPriceFeed.address, {from: owner});
 
       expectEvent(result, 'PoolCreated', {pool: new BN(0)});
+    })
+
+    it('returns Token price', async () => {
+      expect(await staking.getTokenPrice(0)).to.be.bignumber.equal(new BN(price));
+    })
+
+    it('returns RewardToken price', async () => {
+      expect(await staking.getRewardPrice(0)).to.be.bignumber.equal(new BN(price));
     })
 
     it("investor_1 should have 100 stakingToken", async() => {
@@ -82,9 +93,6 @@ contract("Staking Contract", accounts => {
   describe('withdrawing', async() => {
     it('should fail for an account that has not staked', async () => {
       await expectRevert(staking.withdraw(0, 10, { from: owner }), 'Not enough token to widthdraw');
-
-      // Est-ce notmal de mettre à jour le reward après les revert?
-      //console.log("after revert withdraw: " + await staking._getRewardPerToken());
     })
 
     it('should fail if an account tries to withdraw more than they have staked', async () => {
@@ -150,7 +158,7 @@ contract("Staking Contract", accounts => {
 
       const rewardPerBlockAmount = new BN(10);
 
-      const result = await staking.createPool(stakingToken.address, rewardToken.address, rewardPerBlockAmount, rewardToken.address, {from: owner});
+      const result = await staking.createPool(stakingToken.address, rewardToken.address, rewardPerBlockAmount, mockPriceFeed.address, mockPriceFeed.address, {from: owner});
 
       expectEvent(result, 'PoolCreated', {pool: new BN(1)});
     })
