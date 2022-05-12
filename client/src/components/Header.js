@@ -1,6 +1,7 @@
 import React, {Component} from "react";
-import {Badge, Container, Navbar, Button} from "react-bootstrap";
+import {Badge, Container, Navbar} from "react-bootstrap";
 import Web3Context from "../store/web3-context";
+import "../styles/header.css";
 
 class Header extends Component {
 
@@ -32,7 +33,7 @@ class Header extends Component {
         return (
             <Navbar bg="light" expand="lg" fixed="top" className="header">
                 <Container>
-                    <Navbar.Brand href="#home">Staking 0.1</Navbar.Brand>
+                    <Navbar.Brand href="#">Staking 0.1</Navbar.Brand>
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Navbar.Collapse className="justify-content-end">
