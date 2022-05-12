@@ -12,6 +12,12 @@ const getWeb3 = () =>
           await window.ethereum.enable();
           // Accounts now exposed
           resolve(web3);
+          window.ethereum.on('accountsChanged',function(){
+            window.location.reload();
+          });
+          window.ethereum.on('chainChanged',function(){
+            window.location.reload();
+          });
         } catch (error) {
           reject(error);
         }
@@ -22,6 +28,12 @@ const getWeb3 = () =>
         const web3 = window.web3;
         console.log("Injected web3 detected.");
         resolve(web3);
+        window.ethereum.on('accountsChanged',function(){
+          window.location.reload();
+        });
+        window.ethereum.on('chainChanged',function(){
+          window.location.reload();
+        });
       }
       // Fallback to localhost; use dev console port by default...
       else {
