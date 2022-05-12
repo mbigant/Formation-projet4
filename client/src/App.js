@@ -1,33 +1,57 @@
 import React, {Component} from "react";
-import Staking from "./contracts/Staking.json";
+import StakingContract from "./contracts/Staking.json";
 import getWeb3 from "./getWeb3";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Web3Context from "./store/web3-context";
 
 import "./App.css";
+import Header from "./components/Header";
+import StakingList from "./components/StakingList";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = { storageValue: 0, web3: null, accounts: null, contract: null, pools: 0 };
 
   componentDidMount = async () => {
     try {
-      // Get network provider and web3 instance.
       const web3 = await getWeb3();
-
-      // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
-
-      // Get the contract instance.
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = Staking.networks[networkId];
+      const deployedNetwork = StakingContract.networks[networkId];
+
       const instance = new web3.eth.Contract(
-        Staking.abi,
+        StakingContract.abi,
         deployedNetwork && deployedNetwork.address,
       );
+      
+      let owner = await instance.methods.owner().call();
 
-      // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      if( window.ethereum ) {
+        // detect Metamask account change
+        window.ethereum.on('accountsChanged', (accounts) => {
+            this.setState({accounts})
+        });
+
+        // detect Network account change
+        window.ethereum.on('networkChanged', (newNetworkId) => {
+
+            const network = StakingContract.networks[newNetworkId];
+
+            if( network ) {
+                const instance = new web3.eth.Contract(
+                    StakingContract.abi,
+                    network.address,
+                );
+
+                this.setState({contract: instance});
+            }
+            else {
+                alert(`Unsuported network ! Please change`);
+            }
+
+        });
+      }
+      this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase()});
     } catch (error) {
-      // Catch any errors for any of the above operations.
       alert(
         `Failed to load web3, accounts, or contract. Check console for details.`,
       );
@@ -35,37 +59,19 @@ class App extends Component {
     }
   };
 
-  runExample = async () => {
-    const { accounts, contract } = this.state;
-
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
-
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
-
-    // Update state with the result.
-    this.setState({ storageValue: response });
-  };
-
   render() {
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
-      <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 42</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+      <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner}} >
+        <div className="App">
+          <Header/>
+          <StakingList />
+          
       </div>
+      </Web3Context.Provider>
+      
     );
   }
 }
