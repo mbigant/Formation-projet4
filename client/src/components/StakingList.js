@@ -1,6 +1,7 @@
 import React, {Component} from "react";
 import Web3Context from "../store/web3-context";
 import StakingItem from "./StakingItem";
+import {Row} from "react-bootstrap";
 
 
 class StakingList extends Component {
@@ -45,15 +46,13 @@ class StakingList extends Component {
     render() {
 
         return (
-            <div>
-                <ul>
-                    {
-                        this.state.pools.map( (pool,index) => {
-                            return <StakingItem key={index} pool={pool}></StakingItem>
-                        })
-                    }
-                </ul>
-            </div>
+            <Row xs={1} xl={2} className="g-4">
+                {
+                    this.state.pools.map( (pool,index) => {
+                        return <StakingItem key={index} pool={pool}></StakingItem>
+                    })
+                }
+            </Row>
         );
     }
 

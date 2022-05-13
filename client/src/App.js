@@ -54,7 +54,7 @@ class App extends Component {
 
         });
       }
-      this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase(), contractAddress: deployedNetwork.address});
+      this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase()});
     } catch (error) {
       alert(
         `Failed to load web3, accounts, or contract. Check console for details.`,
@@ -68,7 +68,7 @@ class App extends Component {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
-      <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner, contractAddress: this.state.contractAddress}} >
+      <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner}} >
           <div className="App">
               <Header/>
               <Container className="main">
