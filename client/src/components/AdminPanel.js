@@ -1,7 +1,10 @@
 import React, {Component, Fragment} from "react";
 import Web3Context from "../store/web3-context";
 import {Alert, Button, Card, Col, Container, Form, Row} from "react-bootstrap";
+import {toast, ToastContainer} from 'react-toastify';
+
 import "../styles/admin.css";
+import 'react-toastify/dist/ReactToastify.css';
 
 class AdminPanel extends Component {
 
@@ -25,31 +28,28 @@ class AdminPanel extends Component {
         return this.context.accounts.length > 0 && this.context.accounts[0].toLowerCase() === this.context.owner;
     }
 
-    onSubmitHandler = () => {
-        console.log( this.stakingDataFeedInput.current.value )
-        this.context.contract.methods.createPool(
+    runTxPromise = (promise, successMessage) => {
+        return toast.promise(
+            promise,
+            {
+                pending: 'Waiting for transaction',
+                success: successMessage,
+                error: 'Transaction error'
+            }
+        )
+    }
+
+    onSubmitHandler = async () => {
+
+        const txPromise = this.context.contract.methods.createPool(
             this.stakingTokenInput.current.value,
             this.rewardTokenInput.current.value,
             this.rewardPerBlockInput.current.value,
             this.stakingDataFeedInput.current.value,
             this.rewardDataFeedInput.current.value
-        ).send({ from: this.context.accounts[0] })
-            .on('transactionHash', function (hash){
-                console.log('on transactionHash');
-                console.log(hash);
-            })
-            .on('confirmation', function (confirmationNumber, receip){
-                console.log('on confirmation');
-                console.log(confirmationNumber, receip);
-            })
-            .on('receipt', function (receipt){
-                console.log('on receipt');
-                console.log(receipt);
-            })
-            .on('error', function (error, receipt){
-                console.log('on error');
-                console.log(error, receipt);
-            })
+        ).send({ from: this.context.accounts[0] });
+
+        const response = await this.runTxPromise(txPromise, "Pool created");
     }
 
     render() {
@@ -118,7 +118,7 @@ class AdminPanel extends Component {
                                 Create pool
                             </Button>
                         </Form>
-
+                        <ToastContainer/>
                     </Container>
 
                 </Fragment>

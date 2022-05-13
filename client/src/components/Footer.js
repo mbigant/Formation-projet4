@@ -45,7 +45,7 @@ class Footer extends Component {
         return (
             <Navbar expand="lg" fixed="bottom" className="bg-light">
                 <Container>
-                    { this.context.contractAddress ? <Nav>Contract&nbsp;<span className="font-monospace">{this.context.contractAddress}</span></Nav> : '' }
+                    { this.context.contract._address ? <Nav>Contract&nbsp;<span className="font-monospace">{this.context.contract._address}</span></Nav> : '' }
                     <Navbar.Collapse className="justify-content-end">
                         <Navbar.Text>
                             Block {this.state.blockNumber}
