@@ -1,0 +1,71 @@
+Staking._getRewardPerToken(uint256) (contracts/Staking.sol#222-229) uses a dangerous strict equality:
+        - pools[_poolId].totalStaked == 0 (contracts/Staking.sol#223)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dangerous-strict-equalities
+
+Reentrancy in Staking._claimReward(uint256) (contracts/Staking.sol#208-217):
+        External calls:
+        - success = pools[_poolId].rewardToken.transfer(msg.sender,rewardAmount) (contracts/Staking.sol#212)
+        Event emitted after the call(s):
+        - Claimed(_poolId,msg.sender,rewardAmount) (contracts/Staking.sol#215)
+Reentrancy in Staking.deposit(uint256,uint256) (contracts/Staking.sol#105-118):
+        External calls:
+        - success = pools[_poolId].stakingToken.transferFrom(msg.sender,address(this),_amount) (contracts/Staking.sol#114)
+        Event emitted after the call(s):
+        - Staked(_poolId,msg.sender,_amount) (contracts/Staking.sol#117)
+Reentrancy in Staking.withdraw(uint256,uint256) (contracts/Staking.sol#134-148):
+        External calls:
+        - _claimReward(_poolId) (contracts/Staking.sol#142)
+                - success = pools[_poolId].rewardToken.transfer(msg.sender,rewardAmount) (contracts/Staking.sol#212)
+        - success = pools[_poolId].stakingToken.transfer(msg.sender,_amount) (contracts/Staking.sol#144)
+        Event emitted after the call(s):
+        - Withdrawn(_poolId,msg.sender,_amount) (contracts/Staking.sol#147)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
+
+Different versions of Solidity are used:
+        - Version used: ['0.8.9', '^0.8.0']
+        - 0.8.9 (contracts/PriceConsumerV3.sol#2)
+        - 0.8.9 (contracts/Staking.sol#2)
+        - ^0.8.0 (node_modules/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol#2)
+        - ^0.8.0 (node_modules/@openzeppelin/contracts/access/Ownable.sol#4)
+        - ^0.8.0 (node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol#4)
+        - ^0.8.0 (node_modules/@openzeppelin/contracts/utils/Context.sol#4)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
+
+Context._msgData() (node_modules/@openzeppelin/contracts/utils/Context.sol#21-23) is never used and should be removed
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dead-code
+
+Pragma version0.8.9 (contracts/PriceConsumerV3.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.7
+Pragma version0.8.9 (contracts/Staking.sol#2) necessitates a version too recent to be trusted. Consider deploying with 0.6.12/0.7.6/0.8.7
+Pragma version^0.8.0 (node_modules/@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol#2) allows old versions
+Pragma version^0.8.0 (node_modules/@openzeppelin/contracts/access/Ownable.sol#4) allows old versions
+Pragma version^0.8.0 (node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol#4) allows old versions
+Pragma version^0.8.0 (node_modules/@openzeppelin/contracts/utils/Context.sol#4) allows old versions
+solc-0.8.9 is not recommended for deployment
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+
+Parameter Staking.createPool(address,address,uint256,address,address)._tokenToStake (contracts/Staking.sol#68) is not in mixedCase
+Parameter Staking.createPool(address,address,uint256,address,address)._tokenReward (contracts/Staking.sol#68) is not in mixedCase
+Parameter Staking.createPool(address,address,uint256,address,address)._rewardPerBlock (contracts/Staking.sol#68) is not in mixedCase
+Parameter Staking.createPool(address,address,uint256,address,address)._stakingTokenDataFeedAddress (contracts/Staking.sol#68) is not in mixedCase
+Parameter Staking.createPool(address,address,uint256,address,address)._rewardTokenDataFeedAddress (contracts/Staking.sol#68) is not in mixedCase
+Parameter Staking.deposit(uint256,uint256)._poolId (contracts/Staking.sol#105) is not in mixedCase
+Parameter Staking.deposit(uint256,uint256)._amount (contracts/Staking.sol#105) is not in mixedCase
+Parameter Staking.withdraw(uint256,uint256)._poolId (contracts/Staking.sol#134) is not in mixedCase
+Parameter Staking.withdraw(uint256,uint256)._amount (contracts/Staking.sol#134) is not in mixedCase
+Parameter Staking.claim(uint256)._poolId (contracts/Staking.sol#162) is not in mixedCase
+Parameter Staking.getRewardToClaim(uint256)._poolId (contracts/Staking.sol#178) is not in mixedCase
+Parameter Staking.getUserBalance(uint256,address)._poolId (contracts/Staking.sol#240) is not in mixedCase
+Parameter Staking.getUserBalance(uint256,address)._address (contracts/Staking.sol#240) is not in mixedCase
+Parameter Staking.getPoolBalance(uint256)._poolId (contracts/Staking.sol#252) is not in mixedCase
+Parameter Staking.getRewardPrice(uint256)._poolId (contracts/Staking.sol#264) is not in mixedCase
+Parameter Staking.getTokenPrice(uint256)._poolId (contracts/Staking.sol#276) is not in mixedCase
+Parameter Staking.getRemainingRewards(uint256)._poolId (contracts/Staking.sol#281) is not in mixedCase
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+
+getLatestPrice() should be declared external:
+        - PriceConsumerV3.getLatestPrice() (contracts/PriceConsumerV3.sol#26-36)
+renounceOwnership() should be declared external:
+        - Ownable.renounceOwnership() (node_modules/@openzeppelin/contracts/access/Ownable.sol#54-56)
+transferOwnership(address) should be declared external:
+        - Ownable.transferOwnership(address) (node_modules/@openzeppelin/contracts/access/Ownable.sol#62-65)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#public-function-that-could-be-declared-external

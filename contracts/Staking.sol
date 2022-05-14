@@ -111,10 +111,10 @@ contract Staking is Ownable {
         pools[_poolId].totalStaked += _amount;
         usersInPool[_poolId][msg.sender].balance += _amount;
 
+        emit Staked(_poolId, msg.sender, _amount);
+
         bool success = pools[_poolId].stakingToken.transferFrom(msg.sender, address(this), _amount);
         assert(success);
-
-        emit Staked(_poolId, msg.sender, _amount);
     }
 
     /**
@@ -139,12 +139,13 @@ contract Staking is Ownable {
 
         usersInPool[_poolId][msg.sender].balance -= _amount;
         pools[_poolId].totalStaked -= _amount;
+
+        emit Withdrawn(_poolId, msg.sender, _amount);
+        
         _claimReward(_poolId);
 
         bool success = pools[_poolId].stakingToken.transfer(msg.sender, _amount);
         assert(success);
-
-        emit Withdrawn(_poolId, msg.sender, _amount);
     }
 
     /**
@@ -209,10 +210,11 @@ contract Staking is Ownable {
         if (usersInPool[_poolId][msg.sender].rewardBalance > 0) {
             uint rewardAmount = usersInPool[_poolId][msg.sender].rewardBalance;
             usersInPool[_poolId][msg.sender].rewardBalance = 0;
-            bool success = pools[_poolId].rewardToken.transfer(msg.sender, rewardAmount);
-            assert(success);
 
             emit Claimed(_poolId, msg.sender, rewardAmount);
+
+            bool success = pools[_poolId].rewardToken.transfer(msg.sender, rewardAmount);
+            assert(success);     
         }
     }
 
@@ -220,12 +222,13 @@ contract Staking is Ownable {
      * @dev Return the result of reward per token since the last update
      */
     function _getRewardPerToken(uint _poolId) private view returns (uint) {
-        if (pools[_poolId].totalStaked == 0) {
-            return pools[_poolId].rewardPerToken;
+        if (pools[_poolId].totalStaked > 0) {
+            return pools[_poolId].rewardPerToken + (((block.number - pools[_poolId].lastUpdateBlock) * pools[_poolId].rewardPerBlock * 1e18) / pools[_poolId].totalStaked);
+        
         }
         else {
-            return pools[_poolId].rewardPerToken + (((block.number - pools[_poolId].lastUpdateBlock) * pools[_poolId].rewardPerBlock * 1e18) / pools[_poolId].totalStaked);
-        }
+            return pools[_poolId].rewardPerToken;
+            }
     }
 
     /**

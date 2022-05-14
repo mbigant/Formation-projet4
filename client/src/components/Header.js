@@ -1,5 +1,5 @@
 import React, {Component} from "react";
-import {Badge, Container, Navbar} from "react-bootstrap";
+import {Badge, Container, Navbar, Nav} from "react-bootstrap";
 import Web3Context from "../store/web3-context";
 import "../styles/header.css";
 
@@ -29,13 +29,20 @@ class Header extends Component {
     }
 
     render() {
-
+        
+        let adminLink;
+        const user = this.context.accounts[0].toLowerCase();
+        const owner = this.context.owner;
+        if (user === owner) {
+            adminLink = <Nav.Link href="#/admin">Admin Page</Nav.Link>                
+        }
         return (
             <Navbar bg="light" expand="lg" fixed="top" className="header">
                 <Container>
-                    <Navbar.Brand href="#">Staking 0.1</Navbar.Brand>
+                    <Navbar.Brand href="#">Staking 0.1</Navbar.Brand>                                       
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav">
+                        {adminLink}
                         <Navbar.Collapse className="justify-content-end">
                             <Navbar.Text>
                                 { this.context.accounts.length > 0 ? 
