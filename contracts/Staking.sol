@@ -193,6 +193,12 @@ contract Staking is Ownable {
         usersInPool[_poolId][msg.sender].rewardPerToken = pools[_poolId].rewardPerToken;
     }
 
+    /**
+     * @dev Get the pending reward
+     *
+     * @param _poolId index of the pool in the Pool[] array
+     *
+     */
     function getPendingReward(uint _poolId) external view returns (uint) {
         uint poolRewardPerToken = _getRewardPerToken(_poolId);
         uint userRewardBalance = _getRewardsEarnedLastPeriod(_poolId);
@@ -286,7 +292,7 @@ contract Staking is Ownable {
         return pools[_poolId].stakingTokenDataFeed.getLatestPrice();
     }
 
-    // todo garder ? permettrait de savoir si la pool a assez de reward token
+    // todo garder ? permettrait à l'admin de savoir si la pool a assez de reward token
     function getRemainingRewards(uint _poolId) external view validPool(_poolId) onlyOwner returns (uint) {
         return pools[_poolId].rewardToken.balanceOf(address(this));
     }

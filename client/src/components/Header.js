@@ -4,7 +4,7 @@ import Web3Context from "../store/web3-context";
 import "../styles/header.css";
 
 import etherWalletImg from '../images/ether-wallet.png'
-import { handleConnect } from '../utils/metamask'
+import {handleConnect} from '../utils/metamask'
 
 import ENSText from "./ENSText";
 
@@ -12,7 +12,6 @@ import ENSText from "./ENSText";
 class Header extends Component {
 
     static contextType = Web3Context;
-    displayAddress;
 
     constructor(props) {
         super(props);
@@ -26,14 +25,6 @@ class Header extends Component {
         
     }
 
-    handleClick = () => {
-        // try {
-        //     navigator.clipboard.writeText(this.context.accounts[0]);
-        //   } catch (error) {
-        //     console.log(error);
-        //   }
-    }
-
     render() {
 
         const connectUser = () => {
@@ -42,7 +33,6 @@ class Header extends Component {
                     return <Navbar.Text>
                            <div>
                             <ENSText address={this.context.accounts[0]} />
-                               {/* <Button variant="outline-secondary" onClick={this.handleClick}>Copy</Button> */}
                            </div>
                            </Navbar.Text>
                 } else {

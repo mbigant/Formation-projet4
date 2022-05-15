@@ -57,9 +57,6 @@ class App extends Component {
       }
       this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase()});
     } catch (error) {
-//      alert(
-//        `Failed to load web3, accounts, or contract. Check console for details.`,
-//      );
       console.error('Failed to load web3, accounts, or contract')
       console.error(error);
     }

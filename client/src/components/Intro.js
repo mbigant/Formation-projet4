@@ -13,7 +13,7 @@ class Intro extends Component {
             <Alert variant="secondary">
               <Alert.Heading>Welcome to Alyra dApp staking</Alert.Heading>
               <p>
-                Stake your DEGEN tokens and receive our RWT tokens
+                Stake your tokens and receive some rewards
               </p>
               <p>
               <b>Disclaimer: This app is for testing purposes only and does not intend to use real money</b>

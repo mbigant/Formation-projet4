@@ -55,7 +55,7 @@ class AdminPanel extends Component {
             this.rewardDataFeedInput.current.value
         ).send({ from: this.context.accounts[0] });
 
-        const response = await this.runTxPromise(txPromise, "Pool created");
+        await this.runTxPromise(txPromise, "Pool created");
     }
 
     checkDataFeedContract = async (e) => {

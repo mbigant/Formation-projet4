@@ -76,12 +76,10 @@ contract("Staking Contract", accounts => {
     })
 
     it("staking address should have balance of 100", async () => {
-      //console.log("balanceOf(staking.address): " + await stakingToken.balanceOf(staking.address))
       expect(await stakingToken.balanceOf(staking.address)).to.be.bignumber.equal(new BN(100));
     })
 
     it("investor_1 should have an empty balance", async () => {
-      //console.log("balanceOf(investor_1): " + await stakingToken.balanceOf(investor_1));
       expect(await stakingToken.balanceOf(investor_1)).to.be.bignumber.equal(new BN(0));
     })
 
@@ -102,12 +100,11 @@ contract("Staking Contract", accounts => {
     it('should advance the block', async() => {
 
       const latest = await time.latestBlock();
-      //console.log(`Current block: ${latest}`);
 
       await time.advanceBlockTo(parseInt(latest) + 1);
 
       const current = await time.latestBlock();
-      //console.log(`Current block: ${current}`);
+
       assert.equal(current, parseInt(latest) + 1);
     })
 
@@ -136,16 +133,6 @@ contract("Staking Contract", accounts => {
       expect( await stakingToken.balanceOf(investor_1)).to.be.bignumber.equal(new BN(100));
       expect(await rewardToken.balanceOf(investor_1)).to.be.bignumber.equal(new BN(expectedReward));
       expect(await staking.getPoolBalance(0)).to.be.bignumber.equal(new BN(0));
-      //console.log("balanceOf(investor_1) stakingToken: " + await stakingToken.balanceOf(investor_1));
-      //console.log("balanceOf(investor_1) rewardToken: " + await rewardToken.balanceOf(investor_1));
-      //console.log("totalStaked: "+await staking.getPoolBalance(0));
-      // console.log("Block number at first deposit: " + firstDepositBlockNumberForInvestor1);
-      // console.log("Block number after last withdraw: " + blockNumber);
-      // console.log("Nb Block: " + (blockNumber - firstDepositBlockNumberForInvestor1) );
-      // console.log("Expected rewards : " + expectedReward );
-
-
-      // expect(expectedReward).to.be.equal(50);
     })
 
 

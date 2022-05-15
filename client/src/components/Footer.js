@@ -44,7 +44,16 @@ class Footer extends Component {
     render() {
         const contractAddress = () => {
             if( this.context.web3 ) {
-                return this.context.contract._address ? <Nav>Contract&nbsp;<span className="font-monospace">{this.context.contract._address}</span></Nav> : ''
+                return this.context.contract._address ?
+                    <>
+                        <Nav.Item>
+                            <Nav.Link href={`https://kovan.etherscan.io/address/${this.context.contract._address}`} className="text-reset" target="_blank">Contract</Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link href={`https://github.com/mbigant/Formation-projet4`} className="text-reset" target="_blank">Github</Nav.Link>
+                        </Nav.Item>
+                    </>
+                : ''
             }
         }
         return (

@@ -60,7 +60,7 @@ class ENSText extends Component {
                         </Tooltip>
                     }
                 >
-                    <Badge bg="primary">
+                    <Badge bg="primary p-2">
                     {
                         this.state.ens ? Utils.toTitle(this.state.ens) :  <span className={'font-monospace'}>{this.state.addressPreview}</span>
                     }
