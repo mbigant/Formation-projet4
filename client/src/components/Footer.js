@@ -42,10 +42,15 @@ class Footer extends Component {
     }
 
     render() {
+        const contractAddress = () => {
+            if( this.context.web3 ) {
+                return this.context.contract._address ? <Nav>Contract&nbsp;<span className="font-monospace">{this.context.contract._address}</span></Nav> : ''
+            }
+        }
         return (
             <Navbar expand="lg" fixed="bottom" className="bg-light">
                 <Container>
-                    { this.context.contract._address ? <Nav>Contract&nbsp;<span className="font-monospace">{this.context.contract._address}</span></Nav> : '' }
+                    {contractAddress()}
                     <Navbar.Collapse className="justify-content-end">
                         <Navbar.Text>
                             Block {this.state.blockNumber}
