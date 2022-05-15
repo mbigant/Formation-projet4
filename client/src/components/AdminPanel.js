@@ -2,9 +2,11 @@ import React, {Component, Fragment} from "react";
 import Web3Context from "../store/web3-context";
 import {Alert, Button, Card, Col, Container, Form, Row} from "react-bootstrap";
 import {toast, ToastContainer} from 'react-toastify';
+import web3 from "web3";
 
 import "../styles/admin.css";
 import 'react-toastify/dist/ReactToastify.css';
+import DataFeed from "../contracts/DataFeedInterface.json";
 
 class AdminPanel extends Component {
 
@@ -22,6 +24,10 @@ class AdminPanel extends Component {
         this.rewardTokenInput = React.createRef();
         this.rewardDataFeedInput = React.createRef();
         this.rewardPerBlockInput = React.createRef();
+    }
+
+    async componentDidMount() {
+
     }
 
     isAdmin = () => {
@@ -44,12 +50,32 @@ class AdminPanel extends Component {
         const txPromise = this.context.contract.methods.createPool(
             this.stakingTokenInput.current.value,
             this.rewardTokenInput.current.value,
-            this.rewardPerBlockInput.current.value,
+            web3.utils.toWei(this.rewardPerBlockInput.current.value),
             this.stakingDataFeedInput.current.value,
             this.rewardDataFeedInput.current.value
         ).send({ from: this.context.accounts[0] });
 
         const response = await this.runTxPromise(txPromise, "Pool created");
+    }
+
+    checkDataFeedContract = async (e) => {
+
+        const dataFeedCOntract = new this.context.web3.eth.Contract(
+            DataFeed,
+            e.target.value,
+        );
+
+        try {
+            const decimals = await dataFeedCOntract.methods.decimals().call();
+
+            if( parseInt(decimals) !== 8 ) {
+                alert('Only 8 decimals datafeed allowed');
+                e.target.value = '';
+            }
+
+        } catch (err) {
+            alert("Invalid datafeed address !")
+        }
     }
 
     render() {
@@ -76,8 +102,11 @@ class AdminPanel extends Component {
                                         </Col>
                                         <Col lg={6}>
                                             <Form.Group className="mb-3 text-start form-floating">
-                                                <Form.Control ref={this.stakingDataFeedInput} type="text" placeholder="Datafeed address" />
+                                                <Form.Control onChange={this.checkDataFeedContract.bind(this)} ref={this.stakingDataFeedInput} type="text" placeholder="Datafeed address" required />
                                                 <Form.Label>Chainlink datafeed address</Form.Label>
+                                                <Form.Text className="text-muted">
+                                                    Only USD pair (8 decimals)
+                                                </Form.Text>
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -90,19 +119,22 @@ class AdminPanel extends Component {
                                     <Row>
                                         <Col lg={6}>
                                             <Form.Group className="mb-3 text-start form-floating">
-                                                <Form.Control ref={this.rewardTokenInput} type="text" placeholder="ERC20 address" />
+                                                <Form.Control ref={this.rewardTokenInput} type="text" placeholder="ERC20 address" required/>
                                                 <Form.Label>ERC20 address</Form.Label>
                                             </Form.Group>
                                         </Col>
                                         <Col lg={6}>
                                             <Form.Group className="mb-3 text-start form-floating">
-                                                <Form.Control ref={this.rewardDataFeedInput} type="text" placeholder="Datafeed address" />
+                                                <Form.Control onChange={this.checkDataFeedContract.bind(this)} ref={this.rewardDataFeedInput} type="text" placeholder="Datafeed address" required/>
                                                 <Form.Label>Chainlink datafeed address</Form.Label>
+                                                <Form.Text className="text-muted">
+                                                    Only USD pair (8 decimals)
+                                                </Form.Text>
                                             </Form.Group>
                                         </Col>
                                         <Col xs={12}>
                                             <Form.Group className="mb-3 text-start form-floating">
-                                                <Form.Control ref={this.rewardPerBlockInput} type="number" placeholder="reward rate" />
+                                                <Form.Control ref={this.rewardPerBlockInput} type="number" placeholder="reward rate" required />
                                                 <Form.Label>Reward rate</Form.Label>
                                                 <Form.Text className="text-muted">
                                                     Number of tokens distributed each block

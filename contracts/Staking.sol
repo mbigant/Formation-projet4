@@ -161,9 +161,9 @@ contract Staking is Ownable {
      * - `msg.sender` must have rewards to claim for
      */
     function claim(uint _poolId) external validPool(_poolId) {
-        require(usersInPool[_poolId][msg.sender].rewardBalance > 0, "Nothing to claim");
-
         _updateRewards(_poolId);
+
+        require(usersInPool[_poolId][msg.sender].rewardBalance > 0, "Nothing to claim");
 
         _claimReward(_poolId);
     }
@@ -191,6 +191,12 @@ contract Staking is Ownable {
         pools[_poolId].lastUpdateBlock = block.number;
         usersInPool[_poolId][msg.sender].rewardBalance = _getRewardsEarnedLastPeriod(_poolId);
         usersInPool[_poolId][msg.sender].rewardPerToken = pools[_poolId].rewardPerToken;
+    }
+
+    function getPendingReward(uint _poolId) external view returns (uint) {
+        uint poolRewardPerToken = _getRewardPerToken(_poolId);
+        uint userRewardBalance = _getRewardsEarnedLastPeriod(_poolId);
+        return (usersInPool[_poolId][msg.sender].balance * (poolRewardPerToken - usersInPool[_poolId][msg.sender].rewardPerToken) / 1e18) + userRewardBalance;
     }
 
     /**
@@ -228,7 +234,7 @@ contract Staking is Ownable {
         }
         else {
             return pools[_poolId].rewardPerToken;
-            }
+        }
     }
 
     /**
