@@ -11,6 +11,7 @@ import {Container} from "react-bootstrap";
 import {Route, Switch} from "react-router-dom";
 import Footer from "./components/Footer";
 import AdminPanel from "./components/AdminPanel";
+import Intro from "./components/Intro";
 
 class App extends Component {
   state = { storageValue: 0, web3: null, accounts: null, contract: null, pools: 0 };
@@ -56,17 +57,27 @@ class App extends Component {
       }
       this.setState({ web3, accounts, contract: instance, owner: owner.toLowerCase()});
     } catch (error) {
-      alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
-      );
+//      alert(
+//        `Failed to load web3, accounts, or contract. Check console for details.`,
+//      );
+      console.error('Failed to load web3, accounts, or contract')
       console.error(error);
     }
   };
 
   render() {
-    if (!this.state.web3) {
-      return <div>Loading Web3, accounts, and contract...</div>;
+    const stakingList = () => {
+        if (this.state.web3) {
+            return <StakingList />;
+        }
     }
+
+    const adminPanel = () => {
+        if (this.state.web3) {
+            return <AdminPanel />;
+        }
+    }
+
     return (
       <Web3Context.Provider value={{web3: this.state.web3, contract: this.state.contract, accounts: this.state.accounts, owner: this.state.owner}} >
           <div className="App">
@@ -74,10 +85,11 @@ class App extends Component {
               <Container className="main">
                   <Switch>
                       <Route exact path="/">
-                          <StakingList />
+                          <Intro />
+                          {stakingList()}
                       </Route>
                       <Route exact path="/admin">
-                          <AdminPanel />
+                          {adminPanel()}
                       </Route>
                   </Switch>
               </Container>
