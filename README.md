@@ -9,6 +9,17 @@ React application using truffle box
 - Toast messages
 - Responsive layout
 
+## Organization
+- Planning meeting (all members) => create Github issues
+- Create feature branch (developper)  
+- Pull request when dev finished
+- Ask code reviews if necessary 
+- Merge to master
+
+## Security
+- Code analysis with slither and mythril
+- Fix detected problems
+
 ## Links
 
 - Deployed app :
