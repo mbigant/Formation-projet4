@@ -1,7 +1,8 @@
 import React, {Component} from "react";
-import {Badge, Container, Navbar, Nav} from "react-bootstrap";
+import {Badge, Container, Nav, Navbar} from "react-bootstrap";
 import Web3Context from "../store/web3-context";
 import "../styles/header.css";
+import ENSText from "./ENSText";
 
 class Header extends Component {
 
@@ -47,7 +48,7 @@ class Header extends Component {
                             <Navbar.Text>
                                 { this.context.accounts.length > 0 ? 
                                     <div>
-                                        {`${this.context.accounts[0].substring(0, 4)}...${this.context.accounts[0].substring(this.context.accounts[0].length - 4)}`}
+                                        { this.context.accounts.length > 0 ? <ENSText address={this.context.accounts[0]} /> : <Badge bg="danger">Not connected</Badge> }
                                         {/* <Button variant="outline-secondary" onClick={this.handleClick}>Copy</Button> */}
                                     </div> 
                                     : 
