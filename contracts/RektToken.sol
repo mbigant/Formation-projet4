@@ -3,9 +3,9 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract DegenToken is ERC20 {
+contract RektToken is ERC20 {
 
-    constructor(uint256 amount) ERC20("Degen Token", "DGN") {
+    constructor(uint256 amount) ERC20("Rekt Token", "RKT") {
         _mint(msg.sender, amount);
     }
 

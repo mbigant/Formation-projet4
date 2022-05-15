@@ -1,9 +1,13 @@
 import React, {Component} from "react";
-import {Badge, Container, Navbar, Nav} from "react-bootstrap";
+import {Badge, Container, Nav, Navbar} from "react-bootstrap";
 import Web3Context from "../store/web3-context";
 import "../styles/header.css";
+
 import etherWalletImg from '../images/ether-wallet.png'
 import { handleConnect } from '../utils/metamask'
+
+import ENSText from "./ENSText";
+
 
 class Header extends Component {
 
@@ -37,7 +41,7 @@ class Header extends Component {
                 if ( this.context.accounts.length > 0 ) {
                     return <Navbar.Text>
                            <div>
-                               {`${this.context.accounts[0].substring(0, 4)}...${this.context.accounts[0].substring(this.context.accounts[0].length - 4)}`}
+                            <ENSText address={this.context.accounts[0]} />
                                {/* <Button variant="outline-secondary" onClick={this.handleClick}>Copy</Button> */}
                            </div>
                            </Navbar.Text>

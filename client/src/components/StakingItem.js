@@ -1,5 +1,5 @@
 import React, {Component} from "react";
-import {Badge, Button, Card, Col, Form, InputGroup} from "react-bootstrap";
+import {Button, Card, Col, Row, Stack, Tab, Tabs} from "react-bootstrap";
 import {toast, ToastContainer} from 'react-toastify';
 import Web3Context from "../store/web3-context";
 import ERC20Contract from "../contracts/ERC20.json";
@@ -7,7 +7,15 @@ import web3 from "web3";
 
 import '../styles/StakingItem.css';
 import 'react-toastify/dist/ReactToastify.css';
+import Deposit from "./Deposit";
+import Withdraw from "./Withdraw";
 
+const nfUSD = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+    roundingIncrement: 5
+});
 
 class StakingItem extends Component {
 
@@ -25,9 +33,20 @@ class StakingItem extends Component {
             userAllowance: 0, // value in Wei
             depositAmount: 0, // value in Wei
             isValidAmount: false,
+            pendingRewards: 0,
+            tlv: 0,
+            tlvUSD: 0,
+            tokenPriceUSD: 0,
+            rewardPriceUSD: 0,
+            apr: null
         }
 
         this.depositAmountInput = React.createRef();
+
+        this.blockTimer = setInterval(
+            () => this.getPendingReward(),
+            1000
+        );
     }
 
     componentDidMount = async () => {
@@ -45,6 +64,30 @@ class StakingItem extends Component {
         }
     }
 
+    async getPendingReward() {
+
+        const rewards = await this.context.contract.methods.getPendingReward(this.props.pool.id).call({from: this.state.currentUser});
+
+        this.setState({
+            pendingRewards: Math.round(parseFloat(web3.utils.fromWei(rewards)) * 100) / 100
+        });
+    }
+
+    getAverageBlockTime = async (blockCount) => {
+        const blockNumber = await this.context.web3.eth.getBlockNumber();
+        const firstBlock = await this.context.web3.eth.getBlock(blockNumber - blockCount);
+        let prevTimestamp = firstBlock.timestamp;
+        const timestampHistory = [];
+
+        for( let i = firstBlock.number + 1; i < firstBlock.number + blockCount; i++ ) {
+            const curBlock = await this.context.web3.eth.getBlock(i);
+            timestampHistory.push( curBlock.timestamp - prevTimestamp );
+            prevTimestamp = curBlock.timestamp;
+        }
+
+        return Math.round(timestampHistory.reduce((a, b) => a + b) / timestampHistory.length);
+    }
+
     loadUserData = async ( userAccount ) => {
 
         const erc20RewardInstance = this.getRewardTokenContract();
@@ -55,6 +98,15 @@ class StakingItem extends Component {
         const userBalanceInPool = await this.context.contract.methods.getUserBalance(this.props.pool.id, userAccount).call();
         const userBalanceInWallet = await erc20StakingInstance.methods.balanceOf(userAccount).call();
         const userAllowance = await erc20StakingInstance.methods.allowance(userAccount, this.context.contract._address).call();
+        const tlv = await this.context.contract.methods.getPoolBalance(this.props.pool.id).call();
+        const tokenPrice = await this.context.contract.methods.getTokenPrice(this.props.pool.id).call();
+        const rewardPrice = await this.context.contract.methods.getRewardPrice(this.props.pool.id).call();
+
+        const tokenPriceUSD = parseFloat(tokenPrice)/100000000; // 8 decimal on USD chainlink datafeed
+        const rewardPriceUSD = parseFloat(rewardPrice)/100000000;
+        const tlvUSD = parseFloat(web3.utils.fromWei(tlv))  * tokenPriceUSD
+
+        this.getAPR( rewardPriceUSD, tlvUSD ); // keep this async
 
         this.setState({
             rewardTokenSymbol: rewardSymbol,
@@ -62,7 +114,28 @@ class StakingItem extends Component {
             userAllowance,
             userBalanceInPool,
             userBalanceInWallet,
+            tlv,
+            tlvUSD,
+            tokenPriceUSD: nfUSD.format(tokenPriceUSD),
+            rewardPriceUSD,
         });
+    }
+
+    getAPR = async ( rewardPriceUSD, tlvUSD ) => {
+
+        const blockTime = await this.getAverageBlockTime(20);
+
+        const nbBlockPerYear = 365 * 24 * 60 * 60 / blockTime;
+        const rewardPerBlock = parseFloat(web3.utils.fromWei(this.props.pool.rewardPerBlock));
+        const blockEarning = rewardPerBlock * rewardPriceUSD;
+        const earningPerYear = nbBlockPerYear * blockEarning;
+        const apr = earningPerYear / tlvUSD;
+        const aprTxt = new Intl.NumberFormat("en-US", {
+            style: "percent",
+            maximumFractionDigits: 0,
+        }).format(apr)
+
+        this.setState({apr: aprTxt})
     }
 
     getStakingTokenContract = () => {
@@ -79,37 +152,6 @@ class StakingItem extends Component {
         );
     }
 
-    depositAmountInputHandler = (e) => {
-        const val = e.target.value;
-        if( val > 0 ) {
-            this.setState({depositAmount: web3.utils.toWei(val.toString()), isValidAmount: true})
-        }
-        else {
-            this.setState({depositAmount: 0, isValidAmount: false})
-        }
-    }
-
-    useMaxDepositHandler = (e) => {
-        const val = web3.utils.fromWei(this.state.userBalanceInWallet);
-        this.depositAmountInput.current.value = val;
-        this.setState({depositAmount: val})
-    }
-
-    requestDeposit = async (e) => {
-        e.preventDefault();
-
-        this.setState({depositLoading: true});
-
-        if( web3.utils.toBN(this.state.userAllowance).lt(web3.utils.toBN(this.state.depositAmount)) ) {
-            // need approval before deposit
-            await this.runApprove();
-        }
-        else {
-            // go deposit
-            await this.runStake();
-        }
-    }
-
     runTxPromise = (promise, successMessage) => {
         return toast.promise(
             promise,
@@ -121,17 +163,17 @@ class StakingItem extends Component {
         )
     }
 
-    runApprove = async () => {
-        const txPromise = this.getStakingTokenContract().methods.approve(this.context.contract._address, this.state.depositAmount).send({from: this.state.currentUser});
-        const resp = await this.runTxPromise(txPromise, "Tokens approved");
+    runApprove = async (amount) => {
+        const txPromise = this.getStakingTokenContract().methods.approve(this.context.contract._address, amount).send({from: this.state.currentUser});
+        const resp = await this.runTxPromise(txPromise, "Ready to deposit");
 
         if( resp.status ) {
             this.loadUserData(this.state.currentUser);
         }
     }
 
-    runStake = async () => {
-        const txPromise = this.context.contract.methods.deposit(this.props.pool.id, this.state.depositAmount).send({from: this.state.currentUser});
+    runStake = async (amount) => {
+        const txPromise = this.context.contract.methods.deposit(this.props.pool.id, amount).send({from: this.state.currentUser});
         const resp = await this.runTxPromise(txPromise, "Succes ! Let's earn money !");
 
         if( resp.status ) {
@@ -139,47 +181,106 @@ class StakingItem extends Component {
         }
     }
 
-    runClaim = () => {
+    runClaim = async () => {
+        const txPromise = this.context.contract.methods.claim(this.props.pool.id).send({from: this.state.currentUser});
+        const resp = await this.runTxPromise(txPromise, "Rewards juste lend into your wallet !");
 
+        if( resp.status ) {
+            this.loadUserData(this.state.currentUser);
+        }
     }
 
-    runWithdraw = () => {
-        
+    runWithdraw = async (amount) => {
+        const txPromise = this.context.contract.methods.withdraw(this.props.pool.id, amount).send({from: this.state.currentUser});
+        const resp = await this.runTxPromise(txPromise, "Successfully withdrawn");
+
+        if( resp.status ) {
+            this.loadUserData(this.state.currentUser);
+        }
     }
 
     render() {
 
-        const approveNeeded = web3.utils.toBN(this.state.userAllowance).lt(web3.utils.toBN(this.state.depositAmount));
+        const claimUsdValue = (this.state.pendingRewards && this.state.rewardPriceUSD) ? parseFloat(this.state.pendingRewards) * this.state.rewardPriceUSD : 0;
 
         return (
             <Col className="staking-item">
                 <Card>
                     <Card.Header>Staking {this.state.stakingTokenSymbol}</Card.Header>
                     <Card.Body>
-                        <Card.Text>APY : <Badge bg="success">100%</Badge></Card.Text>
-                        <Card.Text>Reward Token : {this.state.rewardTokenSymbol}</Card.Text>
-                        <Card.Text>Your Stake : {this.state.userBalanceInPool ? web3.utils.fromWei(this.state.userBalanceInPool) : 0}</Card.Text>
-                        <Card.Text>Wallet : {this.state.userBalanceInWallet ? web3.utils.fromWei(this.state.userBalanceInWallet) : 0}</Card.Text>
-                        <Form onSubmit={this.requestDeposit.bind(this)}>
-                            <Form.Group className="mb-3 text-end form-floating">
-                                <InputGroup>
-                                    <Button onClick={this.useMaxDepositHandler.bind(this)} variant="outline-secondary">Max</Button>
-                                    <Form.Control ref={this.depositAmountInput} onChange={this.depositAmountInputHandler.bind(this)} type="number" min="O" placeholder="Deposit amount" required />
-                                </InputGroup>
-                            </Form.Group>
-                            <div className="d-grid">
-                                { approveNeeded
-                                    ?
-                                    <Button variant="outline-primary" type="submit" disabled={!this.state.isValidAmount}>
-                                        Approve
-                                    </Button>
-                                    :
-                                    <Button variant="primary" type="submit" disabled={!this.state.isValidAmount}>
-                                        Deposit
-                                    </Button>
-                                }
-                            </div>
-                        </Form>
+                        <Row className="mb-2">
+                            <Col className="">
+                                <Stack gap={0} className="p-2 bg-light border">
+                                    <strong className="font-weight-bold">TLV</strong>
+                                    <div className="">{this.state.tlv ? web3.utils.fromWei(this.state.tlv) : 0} {this.state.stakingTokenSymbol} <span className="text-muted">({nfUSD.format(this.state.tlvUSD)})</span></div>
+                                </Stack>
+                            </Col>
+                            <Col className="">
+                                <Stack gap={0} className="p-2 bg-light border">
+                                    <strong className="font-weight-bold">APR 🔥</strong>
+                                    <div className="">{this.state.apr}</div>
+                                </Stack>
+                            </Col>
+                            <Col className="">
+                                <Stack gap={0} className="p-2 bg-light border">
+                                    <strong className="font-weight-bold">Reward</strong>
+                                    <div className="">{this.state.rewardTokenSymbol}</div>
+                                </Stack>
+                            </Col>
+                        </Row>
+
+                        <Row className="mb-2">
+                            <Col className="" xs>
+                                <div className="bg-light border p-2">
+                                    <Row>
+                                        <Col className="d-flex justify-content-start text-muted">
+                                            Balance
+                                        </Col>
+                                        <Col className="d-flex justify-content-end">
+                                            {this.state.userBalanceInPool ? web3.utils.fromWei(this.state.userBalanceInPool) : 0} {this.state.stakingTokenSymbol}
+                                        </Col>
+                                    </Row>
+                                    <Row>
+                                        <Col className="d-flex justify-content-start text-muted">
+                                            Wallet
+                                        </Col>
+                                        <Col className="d-flex justify-content-end">
+                                            {this.state.userBalanceInWallet ? web3.utils.fromWei(this.state.userBalanceInWallet) : 0} {this.state.stakingTokenSymbol}
+                                        </Col>
+                                    </Row>
+                                    <Row>
+                                        <Col className="d-flex justify-content-start text-muted">
+                                            Rewards
+                                        </Col>
+                                        <Col className="d-flex justify-content-end">
+                                            {this.state.pendingRewards} {this.state.rewardTokenSymbol} &nbsp;<span className="text-muted">({nfUSD.format(claimUsdValue)})</span>
+                                        </Col>
+                                    </Row>
+                                    <Row>
+                                        <Col className="">
+                                            { this.state.pendingRewards > 0 && this.state.rewardTokenSymbol && <Button onClick={this.runClaim.bind(this)} variant="outline-success" size={"sm"}>Claim {this.state.pendingRewards} {this.state.rewardTokenSymbol} </Button> }
+                                        </Col>
+                                    </Row>
+                                </div>
+                            </Col>
+                        </Row>
+
+                        <Tabs defaultActiveKey="deposit" className="mb-3">
+                            <Tab eventKey="deposit" title="Deposit">
+                                <Deposit
+                                    userAllowance={this.state.userAllowance}
+                                    userBalanceInWallet={this.state.userBalanceInWallet}
+                                    onApproveRequested={this.runApprove.bind(this)}
+                                    onDepositeRequested={this.runStake.bind(this)}
+                                />
+                            </Tab>
+                            <Tab eventKey="withdraw" title="Withdraw">
+                                <Withdraw
+                                    userBalanceInPool={this.state.userBalanceInPool}
+                                    onWithdrawRequested={this.runWithdraw.bind(this)}
+                                />
+                            </Tab>
+                        </Tabs>
                     </Card.Body>
                 </Card>
                 <ToastContainer />
