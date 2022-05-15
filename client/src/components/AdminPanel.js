@@ -45,8 +45,8 @@ class AdminPanel extends Component {
         )
     }
 
-    onSubmitHandler = async () => {
-
+    onSubmitHandler = async (e) => {
+        e.preventDefault();
         const txPromise = this.context.contract.methods.createPool(
             this.stakingTokenInput.current.value,
             this.rewardTokenInput.current.value,
