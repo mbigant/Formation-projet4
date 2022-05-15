@@ -1,7 +1,12 @@
 import React, {Component} from "react";
-import {Alert} from "react-bootstrap";
+import {Alert, Button} from "react-bootstrap";
 
 class Intro extends Component {
+    handleGithub = () => {
+      console.log("github");
+      window.open('https://github.com/mbigant/Formation-projet4')
+    }
+
     render() {
 
         return (
@@ -15,8 +20,7 @@ class Intro extends Component {
               </p>
               <p>You can have a good overview of the staking process before jumping into the real thing</p>
               <hr />
-              <Alert.Link href="https://github.com/mbigant/Formation-projet4">View on Github</Alert.Link>
-
+              <Button onClick={this.handleGithub} variant='secondary'>View on Github</Button>
             </Alert>
         );
     }
